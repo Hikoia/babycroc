@@ -49,16 +49,8 @@ class Game {
       floorImage: makeImage('/images/floor.png')
     };
     
-    // 触控相关状态
-    this.touchStartX = 0;
-    this.touchStartY = 0;
-    this.touchThreshold = 30; // 触控移动阈值
-    this.isTouching = false;
-    
     // 绑定按键事件
     this.bindKeyEvents();
-    // 绑定触控事件
-    this.bindTouchEvents();
     
     this.lastScoreTime = null; // 添加计时器用于计算分数
     this.SCORE_INTERVAL = 1000; // 每秒检查一次
@@ -226,69 +218,6 @@ class Game {
         this.input.down = false;
         this.sendPlayerMovement();
       }
-    });
-  }
-  
-  /**
-   * 绑定触控事件
-   */
-  bindTouchEvents() {
-    this.canvas.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      const touch = e.touches[0];
-      this.touchStartX = touch.clientX;
-      this.touchStartY = touch.clientY;
-      this.isTouching = true;
-    });
-
-    this.canvas.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-      if (!this.isTouching) return;
-      
-      const touch = e.touches[0];
-      const deltaX = touch.clientX - this.touchStartX;
-      const deltaY = touch.clientY - this.touchStartY;
-      
-      // 重置所有方向
-      this.input.left = false;
-      this.input.right = false;
-      this.input.up = false;
-      this.input.down = false;
-      
-      // 根据滑动方向设置移动
-      if (Math.abs(deltaX) > this.touchThreshold) {
-        if (deltaX > 0) {
-          this.input.right = true;
-          if (this.player) {
-            this.player.setDirection(FACE_RIGHT);
-          }
-        } else {
-          this.input.left = true;
-          if (this.player) {
-            this.player.setDirection(FACE_LEFT);
-          }
-        }
-      }
-      
-      if (Math.abs(deltaY) > this.touchThreshold) {
-        if (deltaY > 0) {
-          this.input.down = true;
-        } else {
-          this.input.up = true;
-        }
-      }
-      
-      this.sendPlayerMovement();
-    });
-
-    this.canvas.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      this.isTouching = false;
-      this.input.left = false;
-      this.input.right = false;
-      this.input.up = false;
-      this.input.down = false;
-      this.sendPlayerMovement();
     });
   }
   
@@ -567,8 +496,14 @@ class Game {
     const minutes = Math.floor(elapsedSeconds / 60);
     const seconds = elapsedSeconds % 60;
     
+    // 计算最高愤怒层数
+    const maxRageLevel = Math.max(0, ...this.objects
+      .filter(obj => obj instanceof Enemy && obj.isEnraged)
+      .map(enemy => enemy.rageLevel)
+    );
+    
     // 绘制状态栏
-    const text = `❤️: ${this.player.health} 💀: ${this.enemiesDestroyed} 🏆: ${this.player.score} ⏱️: ${leftPad(minutes, 2, 0)}:${leftPad(seconds, 2, 0)}`;
+    const text = `❤️: ${this.player.health} 💀: ${this.enemiesDestroyed} 🏆: ${this.player.score} ⏱️: ${leftPad(minutes, 2, 0)}:${leftPad(seconds, 2, 0)} ${maxRageLevel > 0 ? `🔥×${maxRageLevel}` : ''}`;
     
     // 保存当前上下文状态
     this.context.save();
@@ -891,7 +826,7 @@ class Enemy {
     this.destroyed = false;
     this.isEnraged = false;  // 是否处于愤怒状态
     this.enrageEndTime = 0;  // 愤怒状态结束时间
-    this.rageMultiplier = 1; // 愤怒状态倍率
+    this.rageLevel = 0;      // 愤怒层数
     this.setDirection(FACE_LEFT);
   }
 
@@ -908,7 +843,7 @@ class Enemy {
     // 更新愤怒状态
     if (this.isEnraged && Date.now() > this.enrageEndTime) {
       this.isEnraged = false;
-      this.rageMultiplier = 1;
+      this.rageLevel = 0;  // 重置愤怒层数
       this.speed = this.baseSpeed;
     }
 
@@ -1005,21 +940,12 @@ class Enemy {
     game.objects.push(new Candy(this.x, this.y));
   }
 
-  // 添加新方法：进入愤怒状态
+  // 修改愤怒状态方法
   enrage() {
     this.isEnraged = true;
-    this.rageMultiplier += 1.5; // 每次触发增加1.5倍速度
-    this.speed = this.baseSpeed * this.rageMultiplier;
+    this.rageLevel += 1;  // 增加愤怒层数
+    this.speed = this.baseSpeed * (1 + (this.rageLevel * 0.5));  // 每层增加50%速度
     this.enrageEndTime = Date.now() + 5000;  // 5秒后恢复
-    
-    // 添加视觉效果
-    game.objects.push(
-      new DamageTakenText(
-        "🔥".repeat(Math.min(5, Math.floor(this.rageMultiplier / 1.5))), // 调整火焰显示的计算方式
-        this.x,
-        this.y - 30
-      )
-    );
   }
 }
 
@@ -1084,15 +1010,6 @@ class Candy {
             obj.enrage();
           }
         });
-
-        // 创建愤怒状态提示文本
-        game.objects.push(
-          new DamageTakenText(
-            "MOMCROC ENRAGED!", 
-            game.player.x, 
-            game.player.y - 50
-          )
-        );
       }
     }
   }
@@ -1331,15 +1248,6 @@ class CollectibleBall {
             obj.enrage();
           }
         });
-
-        // 创建愤怒状态提示文本
-        game.objects.push(
-          new DamageTakenText(
-            "MOMCROC ENRAGED!", 
-            game.player.x, 
-            game.player.y - 50
-          )
-        );
       }
     }
   }
