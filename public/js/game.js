@@ -6,7 +6,7 @@ class Game {
     // 基本配置
     this.canvas = document.getElementById('canvas');
     this.canvasContainer = document.getElementById('canvas-container');
-    this.context = this.canvas.getContext('2d');
+    this.context = this.canvas ? this.canvas.getContext('2d') : null;
     this.targetFps = 60;
     this.gameRunning = false;
     this.gameIntervalId = null;
@@ -27,6 +27,12 @@ class Game {
       up: false,
       down: false,
     };
+    
+    // 触控相关状态
+    this.touchStartX = 0;
+    this.touchStartY = 0;
+    this.touchThreshold = 30; // 触控移动阈值
+    this.isTouching = false;
     
     // 网络相关
     this.socket = null;
@@ -51,6 +57,9 @@ class Game {
     
     // 绑定按键事件
     this.bindKeyEvents();
+    
+    // 绑定触控事件
+    this.bindTouchEvents();
     
     this.lastScoreTime = null; // 添加计时器用于计算分数
     this.SCORE_INTERVAL = 1000; // 每秒检查一次
@@ -182,6 +191,8 @@ class Game {
    * 绑定按键事件
    */
   bindKeyEvents() {
+    if (!this.canvas) return; // 如果 canvas 不存在则返回
+    
     window.addEventListener('keydown', (e) => {
       if (e.keyCode === KEY_LEFT) {
         this.input.left = true;
@@ -642,6 +653,71 @@ class Game {
       this.lastScoreTime = now;
     }
   }
+
+  /**
+   * 绑定触控事件
+   */
+  bindTouchEvents() {
+    if (!this.canvas) return; // 如果 canvas 不存在则返回
+    
+    this.canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      this.touchStartX = touch.clientX;
+      this.touchStartY = touch.clientY;
+      this.isTouching = true;
+    });
+
+    this.canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (!this.isTouching) return;
+      
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - this.touchStartX;
+      const deltaY = touch.clientY - this.touchStartY;
+      
+      // 重置所有方向
+      this.input.left = false;
+      this.input.right = false;
+      this.input.up = false;
+      this.input.down = false;
+      
+      // 根据滑动方向设置移动
+      if (Math.abs(deltaX) > this.touchThreshold) {
+        if (deltaX > 0) {
+          this.input.right = true;
+          if (this.player) {
+            this.player.setDirection(FACE_RIGHT);
+          }
+        } else {
+          this.input.left = true;
+          if (this.player) {
+            this.player.setDirection(FACE_LEFT);
+          }
+        }
+      }
+      
+      if (Math.abs(deltaY) > this.touchThreshold) {
+        if (deltaY > 0) {
+          this.input.down = true;
+        } else {
+          this.input.up = true;
+        }
+      }
+      
+      this.sendPlayerMovement();
+    });
+
+    this.canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      this.isTouching = false;
+      this.input.left = false;
+      this.input.right = false;
+      this.input.up = false;
+      this.input.down = false;
+      this.sendPlayerMovement();
+    });
+  }
 }
 
 /**
@@ -830,6 +906,14 @@ class Enemy {
     this.setDirection(FACE_LEFT);
   }
 
+  // 修改愤怒状态方法
+  enrage() {
+    this.isEnraged = true;
+    this.rageLevel += 1;  // 增加愤怒层数
+    this.speed = this.baseSpeed * (1 + (this.rageLevel * 0.5));  // 每层增加50%速度
+    this.enrageEndTime = Date.now() + 5000;  // 5秒后恢复
+  }
+
   update() {
     this.prevX = this.x;
     this.prevY = this.y;
@@ -938,14 +1022,6 @@ class Enemy {
     this.destroyed = true;
     game.enemiesDestroyed += 1;
     game.objects.push(new Candy(this.x, this.y));
-  }
-
-  // 修改愤怒状态方法
-  enrage() {
-    this.isEnraged = true;
-    this.rageLevel += 1;  // 增加愤怒层数
-    this.speed = this.baseSpeed * (1 + (this.rageLevel * 0.5));  // 每层增加50%速度
-    this.enrageEndTime = Date.now() + 5000;  // 5秒后恢复
   }
 }
 
