@@ -10,7 +10,6 @@ In a parallel universe, an influencer's attempt to handle baby crocodiles led to
 
 - **Survivor-like Gameplay**: Test your survival skills in an intense environment
 - **Dynamic Difficulty**: Mother crocodile becomes more aggressive as you collect her babies
-- **Multiplayer Experience**: Compete or cooperate with other players in real-time
 - **Scoring System**: Collect eggs and baby crocodiles to increase your score
 - **Power-up System**: Strategic item collection affects mother crocodile's behavior
 - **Easter Eggs**: Hidden features for players to discover (try entering "wombat"!)
@@ -60,13 +59,12 @@ npm start
 3. Collect baby crocodiles and eggs to increase your score
 4. Watch out! Each baby crocodile collected will enrage the mother
 5. Survive as long as possible while collecting the highest score
-6. Compete with other players on the global leaderboard
+6. Compare your score on the leaderboard
 
 ## 🛠️ Built With
 
 - Node.js
 - Express
-- Socket.IO
 - HTML5 Canvas
 
 ## 📝 License

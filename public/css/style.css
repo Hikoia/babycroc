@@ -21,4 +21,51 @@
   background: #45a049 !important;
   transform: scale(1.05);
   transition: all 0.2s ease;
+}
+
+/* 移動端優化 */
+@media (max-width: 768px) {
+  #canvas-container {
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    position: fixed;
+    top: 0;
+    left: 0;
+  }
+
+  canvas {
+    touch-action: none;
+  }
+
+  #game-over-screen,
+  #login-screen {
+    width: 90%;
+    max-width: 400px;
+  }
+
+  .login-container,
+  .game-over-container {
+    padding: 20px;
+  }
+
+  input[type="text"],
+  button {
+    font-size: 16px;
+    padding: 12px;
+    margin: 10px 0;
+  }
+}
+
+/* 防止iOS上的雙擊縮放 */
+* {
+  touch-action: manipulation;
+}
+
+/* 防止頁面滾動和回彈 */
+body {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 } 

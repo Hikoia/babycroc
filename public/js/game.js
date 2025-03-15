@@ -49,8 +49,16 @@ class Game {
       floorImage: makeImage('/images/floor.png')
     };
     
+    // 触控相关状态
+    this.touchStartX = 0;
+    this.touchStartY = 0;
+    this.touchThreshold = 30; // 触控移动阈值
+    this.isTouching = false;
+    
     // 绑定按键事件
     this.bindKeyEvents();
+    // 绑定触控事件
+    this.bindTouchEvents();
     
     this.lastScoreTime = null; // 添加计时器用于计算分数
     this.SCORE_INTERVAL = 1000; // 每秒检查一次
@@ -218,6 +226,69 @@ class Game {
         this.input.down = false;
         this.sendPlayerMovement();
       }
+    });
+  }
+  
+  /**
+   * 绑定触控事件
+   */
+  bindTouchEvents() {
+    this.canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      this.touchStartX = touch.clientX;
+      this.touchStartY = touch.clientY;
+      this.isTouching = true;
+    });
+
+    this.canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+      if (!this.isTouching) return;
+      
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - this.touchStartX;
+      const deltaY = touch.clientY - this.touchStartY;
+      
+      // 重置所有方向
+      this.input.left = false;
+      this.input.right = false;
+      this.input.up = false;
+      this.input.down = false;
+      
+      // 根据滑动方向设置移动
+      if (Math.abs(deltaX) > this.touchThreshold) {
+        if (deltaX > 0) {
+          this.input.right = true;
+          if (this.player) {
+            this.player.setDirection(FACE_RIGHT);
+          }
+        } else {
+          this.input.left = true;
+          if (this.player) {
+            this.player.setDirection(FACE_LEFT);
+          }
+        }
+      }
+      
+      if (Math.abs(deltaY) > this.touchThreshold) {
+        if (deltaY > 0) {
+          this.input.down = true;
+        } else {
+          this.input.up = true;
+        }
+      }
+      
+      this.sendPlayerMovement();
+    });
+
+    this.canvas.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      this.isTouching = false;
+      this.input.left = false;
+      this.input.right = false;
+      this.input.up = false;
+      this.input.down = false;
+      this.sendPlayerMovement();
     });
   }
   
@@ -497,31 +568,44 @@ class Game {
     const seconds = elapsedSeconds % 60;
     
     // 绘制状态栏
-    const texts = [
-      `❤️: ${this.player.health}` +
-      ` 💀: ${this.enemiesDestroyed}` +
-      ` 🏆: ${this.player.score}` +
-      ` ⏱️: ${leftPad(minutes, 2, 0)}:${leftPad(seconds, 2, 0)}`,
-    ];
+    const text = `❤️: ${this.player.health} 💀: ${this.enemiesDestroyed} 🏆: ${this.player.score} ⏱️: ${leftPad(minutes, 2, 0)}:${leftPad(seconds, 2, 0)}`;
     
-    const measures = texts.map(text => measureTextDimensions(text, this.context));
+    // 保存当前上下文状态
+    this.context.save();
     
-    this.guiTopMiddle((x, y) => {
-      const width = Math.max(...measures.map(measure => measure.width));
-      const height = measures.reduce((acc, measure) => acc + measure.height, 0);
-      
-      // 直接绘制文本，不绘制白色背景
-      this.context.font = `24px monospace`;
-      this.context.fillStyle = 'white'; // 改为白色文字
-      
-      for (const [index, text] of texts.entries()) {
-        this.context.fillText(
-          text,
-          x - (width / 2),
-          y + (index * 30) + 10,
-        );
-      }
-    });
+    // 设置固定位置（相对于视口）
+    const viewportX = -pxStrToNumber(this.canvasContainer.style.left);
+    const viewportY = -pxStrToNumber(this.canvasContainer.style.top);
+    const viewportWidth = window.innerWidth;
+    
+    // 设置文本样式
+    this.context.font = '16px monospace';
+    this.context.fillStyle = 'white';
+    this.context.textAlign = 'center';
+    
+    // 绘制半透明背景
+    const textWidth = this.context.measureText(text).width;
+    const padding = 10;
+    const bgHeight = 25;
+    
+    this.context.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    this.context.fillRect(
+      viewportX + (viewportWidth - textWidth) / 2 - padding,
+      viewportY + 10,
+      textWidth + padding * 2,
+      bgHeight
+    );
+    
+    // 绘制文本
+    this.context.fillStyle = 'white';
+    this.context.fillText(
+      text,
+      viewportX + viewportWidth / 2,
+      viewportY + 27
+    );
+    
+    // 恢复上下文状态
+    this.context.restore();
   }
   
   /**

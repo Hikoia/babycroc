@@ -1,45 +1,30 @@
 const express = require('express');
-const http = require('http');
-const socketIO = require('socket.io');
-const path = require('path');
-const mongoose = require('mongoose');
-const geoip = require('geoip-lite');
-
-// 初始化Express应用
 const app = express();
-const server = http.createServer(app);
-const io = socketIO(server);
-
-// 配置静态文件服务
-app.use(express.static(path.join(__dirname, '../public')));
-app.use(express.json());
-
-// 数据库模型
-const LeaderboardSchema = new mongoose.Schema({
-  playerName: { type: String, required: true },
-  score: { type: Number, required: true },
-  survivedTime: { type: String, required: true },
-  country: { type: String, default: 'Unknown' },
-  date: { type: Date, default: Date.now }
+const path = require('path');
+const server = require('http').createServer(app);
+const geoip = require('geoip-lite');
+const io = require('socket.io')(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+    transports: ['websocket', 'polling'],
+    credentials: true
+  },
+  allowEIO3: true
 });
 
-// 如果使用MongoDB，请取消以下注释并配置
-// mongoose.connect('mongodb://localhost:27017/survivors', {
-//   useNewUrlParser: true,
-//   useUnifiedTopology: true
-// });
-// const Leaderboard = mongoose.model('Leaderboard', LeaderboardSchema);
-
-// 用于本地存储的内存排行榜（如果不使用MongoDB）
+// 用於存儲遊戲狀態
+const games = new Map();
 let leaderboardEntries = [];
 
-// 游戏状态管理
-const games = new Map(); // 存储所有游戏实例
-
-// 生成唯一的游戏ID
+// 生成唯一的遊戲ID
 function generateGameId() {
   return Math.random().toString(36).substring(2, 15);
 }
+
+// 設置靜態文件目錄
+app.use(express.static(path.join(__dirname, '../public')));
+app.use(express.json());
 
 // API路由
 app.get('/api/leaderboard', (req, res) => {
@@ -50,35 +35,24 @@ app.get('/api/leaderboard', (req, res) => {
   res.json(sortedEntries);
 });
 
-app.post('/api/leaderboard', (req, res) => {
-  const { playerName, score, survivedTime } = req.body;
-  
-  // 如果使用MongoDB，请使用以下代码
-  // const entry = new Leaderboard({ playerName, score, survivedTime });
-  // entry.save((err, savedEntry) => {
-  //   if (err) return res.status(500).json({ error: err.message });
-  //   res.json(savedEntry);
-  // });
-  
-  // 使用内存存储的排行榜
-  const entry = { playerName, score, survivedTime, date: new Date() };
-  leaderboardEntries.push(entry);
-  res.json(entry);
+// 處理所有路由
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-// Socket.io连接处理
+// WebSocket 連接處理
 io.on('connection', (socket) => {
   console.log('Player connected: ' + socket.id);
   
-  // 获取玩家IP和国家
+  // 獲取玩家IP和國家
   const ip = socket.handshake.address;
   const geo = geoip.lookup(ip) || { country: 'Unknown' };
   
-  // 处理玩家加入
+  // 處理玩家加入
   socket.on('playerJoin', (playerData) => {
     console.log('Player joining game:', playerData.name);
     
-    // 如果玩家已在某个游戏中，先将其移除
+    // 如果玩家已在某個遊戲中，先將其移除
     for (const [gameId, game] of games) {
       if (game.players[socket.id]) {
         delete game.players[socket.id];
@@ -89,7 +63,7 @@ io.on('connection', (socket) => {
       }
     }
     
-    // 创建新的游戏实例
+    // 創建新的遊戲實例
     const gameId = generateGameId();
     const gameState = {
       id: gameId,
@@ -98,7 +72,7 @@ io.on('connection', (socket) => {
       candies: []
     };
     
-    // 将玩家添加到新的游戏实例
+    // 將玩家添加到新的遊戲實例
     gameState.players[socket.id] = {
       id: socket.id,
       name: playerData.name,
@@ -106,25 +80,22 @@ io.on('connection', (socket) => {
       x: Math.random() * 1000 + 500,
       y: Math.random() * 1000 + 500,
       health: 50,
-      level: 1,
-      xp: 0,
       score: 0,
-      direction: 0,
-      items: ['mic', 'discoball']
+      direction: 0
     };
     
-    // 保存游戏实例
+    // 保存遊戲實例
     games.set(gameId, gameState);
     
-    // 将玩家加入到游戏房间
+    // 將玩家加入到遊戲房間
     socket.join(gameId);
     socket.gameId = gameId;
     
-    // 发送游戏状态给玩家
+    // 發送遊戲狀態給玩家
     socket.emit('gameState', gameState);
   });
   
-  // 处理玩家移动
+  // 處理玩家移動
   socket.on('playerMove', (movement) => {
     const gameState = games.get(socket.gameId);
     if (!gameState || !gameState.players[socket.id]) return;
@@ -141,7 +112,7 @@ io.on('connection', (socket) => {
       player.direction = movement.direction;
     }
     
-    // 只向同一游戏实例的玩家广播更新
+    // 只向同一遊戲實例的玩家廣播更新
     socket.to(socket.gameId).emit('playerUpdate', {
       id: socket.id,
       x: player.x,
@@ -150,29 +121,29 @@ io.on('connection', (socket) => {
     });
   });
   
-  // Handle player disconnect
+  // 處理玩家斷開連接
   socket.on('disconnect', () => {
     console.log('Player disconnected: ' + socket.id);
     
     const gameState = games.get(socket.gameId);
     if (gameState && gameState.players[socket.id]) {
-      // Remove player from game state
+      // 從遊戲狀態中移除玩家
       delete gameState.players[socket.id];
       
-      // If no players left, delete game instance
+      // 如果沒有玩家了，刪除遊戲實例
       if (Object.keys(gameState.players).length === 0) {
         games.delete(socket.gameId);
       } else {
-        // Notify other players in the same game instance
+        // 通知同一遊戲實例中的其他玩家
         socket.to(socket.gameId).emit('playerLeft', socket.id);
       }
     }
   });
   
-  // 处理分数提交
+  // 處理分數提交
   socket.on('submitScore', (scoreData) => {
     const { playerName, score, survivedTime } = scoreData;
-    // 将分数添加到排行榜
+    // 將分數添加到排行榜
     const entry = {
       playerName,
       score,
@@ -186,19 +157,22 @@ io.on('connection', (socket) => {
   });
 });
 
-// 游戏循环 - 每100毫秒更新一次游戏状态
+// 遊戲循環 - 每100毫秒更新一次遊戲狀態
 setInterval(() => {
-  // 更新每个游戏实例
+  // 更新每個遊戲實例
   for (const [gameId, gameState] of games) {
-    // 在这里可以实现敌人AI，生成新敌人等
+    // 在這裡可以實現敵人AI，生成新敵人等
     
-    // 只向该游戏实例的玩家广播更新
+    // 只向該遊戲實例的玩家廣播更新
     io.to(gameId).emit('gameStateUpdate', gameState);
   }
 }, 100);
 
-// 启动服务器
+// 啟動服務器
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`服务器运行在端口 ${PORT}`);
-}); 
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server is running on port ${PORT}`);
+});
+
+// 為 Vercel 環境導出必要的模塊
+module.exports = app; 
