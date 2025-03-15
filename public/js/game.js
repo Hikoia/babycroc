@@ -31,8 +31,12 @@ class Game {
     // 触控相关状态
     this.touchStartX = 0;
     this.touchStartY = 0;
+    this.touchCurrentX = 0;
+    this.touchCurrentY = 0;
     this.touchThreshold = 30; // 触控移动阈值
     this.isTouching = false;
+    this.maxJoystickDistance = 50; // 虚拟摇杆最大距离
+    this.showJoystick = false; // 是否显示虚拟摇杆
     
     // 网络相关
     this.socket = null;
@@ -493,6 +497,9 @@ class Game {
     
     // 绘制界面
     this.drawUI();
+    
+    // 绘制虚拟摇杆
+    this.drawJoystick();
   }
   
   /**
@@ -665,7 +672,16 @@ class Game {
       const touch = e.touches[0];
       this.touchStartX = touch.clientX;
       this.touchStartY = touch.clientY;
+      this.touchCurrentX = touch.clientX;
+      this.touchCurrentY = touch.clientY;
       this.isTouching = true;
+      this.showJoystick = true;
+      
+      // 重置所有方向
+      this.input.left = false;
+      this.input.right = false;
+      this.input.up = false;
+      this.input.down = false;
     });
 
     this.canvas.addEventListener('touchmove', (e) => {
@@ -673,8 +689,19 @@ class Game {
       if (!this.isTouching) return;
       
       const touch = e.touches[0];
-      const deltaX = touch.clientX - this.touchStartX;
-      const deltaY = touch.clientY - this.touchStartY;
+      this.touchCurrentX = touch.clientX;
+      this.touchCurrentY = touch.clientY;
+      
+      let deltaX = this.touchCurrentX - this.touchStartX;
+      let deltaY = this.touchCurrentY - this.touchStartY;
+      
+      // 限制摇杆的距离
+      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+      if (distance > this.maxJoystickDistance) {
+        const angle = Math.atan2(deltaY, deltaX);
+        deltaX = Math.cos(angle) * this.maxJoystickDistance;
+        deltaY = Math.sin(angle) * this.maxJoystickDistance;
+      }
       
       // 重置所有方向
       this.input.left = false;
@@ -682,7 +709,7 @@ class Game {
       this.input.up = false;
       this.input.down = false;
       
-      // 根据滑动方向设置移动
+      // 根据相对于起始点的位置设置移动方向
       if (Math.abs(deltaX) > this.touchThreshold) {
         if (deltaX > 0) {
           this.input.right = true;
@@ -711,12 +738,59 @@ class Game {
     this.canvas.addEventListener('touchend', (e) => {
       e.preventDefault();
       this.isTouching = false;
+      this.showJoystick = false;
       this.input.left = false;
       this.input.right = false;
       this.input.up = false;
       this.input.down = false;
       this.sendPlayerMovement();
     });
+  }
+  
+  /**
+   * 绘制虚拟摇杆
+   */
+  drawJoystick() {
+    if (!this.showJoystick || !this.isTouching) return;
+    
+    // 保存上下文
+    this.context.save();
+    
+    // 计算相对于视口的位置
+    const xOffset = pxStrToNumber(this.canvasContainer.style.left);
+    const yOffset = pxStrToNumber(this.canvasContainer.style.top);
+    const joystickBaseX = this.touchStartX - xOffset;
+    const joystickBaseY = this.touchStartY - yOffset;
+    
+    // 计算摇杆的当前位置
+    let deltaX = this.touchCurrentX - this.touchStartX;
+    let deltaY = this.touchCurrentY - this.touchStartY;
+    
+    // 限制摇杆的距离
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    if (distance > this.maxJoystickDistance) {
+      const angle = Math.atan2(deltaY, deltaX);
+      deltaX = Math.cos(angle) * this.maxJoystickDistance;
+      deltaY = Math.sin(angle) * this.maxJoystickDistance;
+    }
+    
+    const joystickStickX = joystickBaseX + deltaX;
+    const joystickStickY = joystickBaseY + deltaY;
+    
+    // 绘制摇杆底座（半透明圆）
+    this.context.beginPath();
+    this.context.arc(joystickBaseX, joystickBaseY, this.maxJoystickDistance, 0, Math.PI * 2);
+    this.context.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    this.context.fill();
+    
+    // 绘制摇杆手柄（小实心圆）
+    this.context.beginPath();
+    this.context.arc(joystickStickX, joystickStickY, 20, 0, Math.PI * 2);
+    this.context.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    this.context.fill();
+    
+    // 恢复上下文
+    this.context.restore();
   }
 }
 
