@@ -1,121 +1,88 @@
-# 幸存者在线 - Survivors Online
+# I Take A Baby Crocodile
 
-一个基于 Survivors 游戏模板的多人在线版本，让玩家可以一起在同一地图上竞争生存。
+A survivor-like web game inspired by the parallel universe where an American influencer seeks redemption through catching baby crocodiles.
 
-## 功能特点
+## 🎮 Game Story
 
-- RPG 风格的开场白介绍游戏背景
-- 多人在线游戏体验
-- 实时排行榜系统
-- 保留原版游戏的武器和敌人系统
-- 响应式设计，支持不同屏幕大小
+In a parallel universe, an influencer's attempt to handle baby crocodiles led to unexpected consequences. Now, in this survivor-like game, players must navigate through a challenging environment, collecting baby crocodiles and eggs while avoiding the vengeful mother crocodile. Each baby crocodile collected not only increases your score but also enrages the mother, making her more determined to catch you!
 
-## 本地开发运行
+## 🌟 Game Features
 
-1. 安装依赖:
+- **Survivor-like Gameplay**: Test your survival skills in an intense environment
+- **Dynamic Difficulty**: Mother crocodile becomes more aggressive as you collect her babies
+- **Multiplayer Experience**: Compete or cooperate with other players in real-time
+- **Scoring System**: Collect eggs and baby crocodiles to increase your score
+- **Power-up System**: Strategic item collection affects mother crocodile's behavior
+- **Easter Eggs**: Hidden features for players to discover (try entering "wombat"!)
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18.x or higher
+- npm (comes with Node.js)
+
+### Installation
+
+1. Clone the repository
+
+```bash
+git clone https://github.com/Hikoia/babycroc.git
+cd babycroc
+```
+
+2. Install dependencies
 
 ```bash
 npm install
 ```
 
-2. 启动开发服务器:
+3. Start the development server
 
 ```bash
 npm run dev
 ```
 
-3. 打开浏览器访问:
+4. Open your browser and navigate to `http://localhost:3000`
 
-```
-http://localhost:3000
-```
+### Production Deployment
 
-## 在线部署方法
-
-### 方法 1: 使用 Heroku 部署
-
-1. 安装 Heroku CLI 并登录
+To start the production server:
 
 ```bash
-npm install -g heroku
-heroku login
+npm start
 ```
 
-2. 创建一个 Heroku 应用
+## 🎯 How to Play
 
-```bash
-heroku create your-app-name
-```
+1. Enter your name to begin your redemption journey
+2. Use WASD or arrow keys to move your character
+3. Collect baby crocodiles and eggs to increase your score
+4. Watch out! Each baby crocodile collected will enrage the mother
+5. Survive as long as possible while collecting the highest score
+6. Compete with other players on the global leaderboard
 
-3. 部署代码
+## 🛠️ Built With
 
-```bash
-git add .
-git commit -m "Ready for deployment"
-git push heroku main
-```
+- Node.js
+- Express
+- Socket.IO
+- HTML5 Canvas
 
-4. 打开应用
+## 📝 License
 
-```bash
-heroku open
-```
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-### 方法 2: 使用 Vercel 部署
+## 🤝 Contributing
 
-1. 安装 Vercel CLI
+Contributions, issues, and feature requests are welcome! Feel free to check the issues page.
 
-```bash
-npm install -g vercel
-```
+## 👥 Authors
 
-2. 部署到 Vercel
+- **Alvin Wen** - _Initial work_
 
-```bash
-vercel
-```
+## 🙏 Acknowledgments
 
-按照提示完成部署流程。
-
-### 方法 3: 使用 Netlify 部署
-
-1. 安装 Netlify CLI
-
-```bash
-npm install -g netlify-cli
-```
-
-2. 部署到 Netlify
-
-```bash
-netlify deploy
-```
-
-按照提示完成部署流程。
-
-## 数据库配置
-
-默认情况下，游戏使用内存存储来保存排行榜数据。如果需要永久存储，建议配置 MongoDB:
-
-1. 创建 MongoDB 数据库
-2. 更新 server/index.js 中的连接配置:
-
-```javascript
-mongoose.connect("mongodb://your-mongodb-url/survivors", {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
-const Leaderboard = mongoose.model("Leaderboard", LeaderboardSchema);
-```
-
-3. 取消注释相关代码
-
-## 游戏操作
-
-- 使用方向键移动角色
-- 自动攻击附近的敌人
-- 收集经验值提升等级
-
-## 许可证
-
-[MIT](LICENSE)
+- Inspired by parallel universe events
+- Thanks to all playtesters and contributors
+- Special thanks to the crocodile conservation community

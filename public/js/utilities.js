@@ -105,20 +105,20 @@ function updateLoadingProgress(percent) {
 }
 
 /**
- * 获取排行榜数据
+ * Fetch leaderboard data
  */
 async function fetchLeaderboard() {
   try {
     const response = await fetch('/api/leaderboard');
     return await response.json();
   } catch (error) {
-    console.error('获取排行榜数据失败:', error);
+    console.error('Failed to fetch leaderboard data:', error);
     return [];
   }
 }
 
 /**
- * 提交得分到排行榜
+ * Submit score to leaderboard
  */
 async function submitScore(playerName, score, survivedTime) {
   try {
@@ -131,13 +131,13 @@ async function submitScore(playerName, score, survivedTime) {
     });
     return await response.json();
   } catch (error) {
-    console.error('提交分数失败:', error);
+    console.error('Failed to submit score:', error);
     return null;
   }
 }
 
 /**
- * 渲染排行榜
+ * Render leaderboard
  */
 function renderLeaderboard(leaderboardData) {
   const leaderboardList = document.getElementById('leaderboard-list');
@@ -146,7 +146,7 @@ function renderLeaderboard(leaderboardData) {
   leaderboardList.innerHTML = '';
   
   if (leaderboardData.length === 0) {
-    leaderboardList.innerHTML = '<div class="leaderboard-empty">暂无排行数据</div>';
+    leaderboardList.innerHTML = '<div class="leaderboard-empty">No leaderboard data</div>';
     return;
   }
   
@@ -163,4 +163,17 @@ function renderLeaderboard(leaderboardData) {
     
     leaderboardList.appendChild(leaderboardItem);
   });
+}
+
+function spawnCandy(game) {
+  // 随机生成糖果的位置
+  const x = Math.random() * (game.canvas.width - 50);
+  const y = Math.random() * (game.canvas.height - 50);
+  
+  // 创建糖果对象
+  const candy = new Candy(x, y);
+  candy.image = game.images.eggImage;
+  
+  // 将糖果添加到游戏对象列表中
+  game.objects.push(candy);
 } 

@@ -109,6 +109,11 @@ body {
     border-radius: 10px;
     padding: 20px;
     position: relative;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    cursor: pointer;
 }
 
 .dialog-name {
@@ -116,6 +121,10 @@ body {
     font-size: 24px;
     color: #6345e6;
     margin-bottom: 10px;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 .dialog-text {
@@ -123,6 +132,10 @@ body {
     line-height: 1.6;
     margin-bottom: 30px;
     min-height: 80px;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 .dialog-prompt {
@@ -204,33 +217,55 @@ body {
     overflow-y: auto;
 }
 
-.leaderboard-item {
+.leaderboard-row {
     display: flex;
-    justify-content: space-between;
+    align-items: center;
     padding: 10px;
-    border-bottom: 1px solid #333;
+    margin: 5px 0;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 5px;
 }
 
-.leaderboard-rank {
-    width: 50px;
-    text-align: center;
+.leaderboard-row .rank {
+    width: 40px;
     font-weight: bold;
+    color: #FFD700;
 }
 
-.leaderboard-name {
-    flex-grow: 1;
-    text-align: left;
-    padding: 0 10px;
+.leaderboard-row .name {
+    flex: 1;
+    margin-right: 10px;
+    color: #fff;
 }
 
-.leaderboard-score {
-    width: 100px;
-    text-align: right;
+.leaderboard-row .country {
+    width: 60px;
+    color: #8BE9FD;
 }
 
-.leaderboard-time {
+.leaderboard-row .score {
     width: 120px;
     text-align: right;
+    color: #50FA7B;
+}
+
+.leaderboard-row .time {
+    width: 120px;
+    text-align: right;
+    color: #FF79C6;
+}
+
+/* 前三名特殊样式 */
+.leaderboard-row:nth-child(1) {
+    background: rgba(255, 215, 0, 0.2);
+}
+
+.leaderboard-row:nth-child(2) {
+    background: rgba(192, 192, 192, 0.2);
+}
+
+.leaderboard-row:nth-child(3) {
+    background: rgba(205, 127, 50, 0.2);
 }
 
 /* 游戏结束界面样式 */

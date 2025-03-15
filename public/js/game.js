@@ -18,6 +18,7 @@ class Game {
     this.otherPlayers = {};
     this.objects = [];
     this.enemiesDestroyed = 0;
+    this.gameId = null; // 添加游戏ID
     
     // 输入状态
     this.input = {
@@ -36,33 +37,62 @@ class Game {
       playerImageLeft2: makeImage('/images/player-2.L.png'),
       playerImageRight: makeImage('/images/player-1.png'),
       playerImageRight2: makeImage('/images/player-2.png'),
-      skeletonImageLeft: makeImage('/images/skeleton-1.L.png'),
-      skeletonImageLeft2: makeImage('/images/skeleton-2.L.png'),
-      skeletonImageRight: makeImage('/images/skeleton-1.png'),
-      skeletonImageRight2: makeImage('/images/skeleton-2.png'),
-      ballImage1: makeImage('/images/ball-1.png'),
-      ballImage2: makeImage('/images/ball-2.png'),
-      candyDroppedImage: makeImage('/images/candy-dropped.png'),
-      candyImage: makeImage('/images/candy.png'),
-      micImage: makeImage('/images/mic.png'),
+      momcrocImageLeft: makeImage('/images/momcroc-1.L.png'),
+      momcrocImageLeft2: makeImage('/images/momcroc-2.L.png'),
+      momcrocImageRight: makeImage('/images/momcroc-1.png'),
+      momcrocImageRight2: makeImage('/images/momcroc-2.png'),
+      babycrocImage1: makeImage('/images/babycroc-1.png'),
+      babycrocImage2: makeImage('/images/babycroc-2.png'),
+      eggDroppedImage: makeImage('/images/egg-dropped.png'),
+      eggImage: makeImage('/images/egg.png'),
+      iphoneImage: makeImage('/images/iphone.png'),
       floorImage: makeImage('/images/floor.png')
     };
     
     // 绑定按键事件
     this.bindKeyEvents();
+    
+    this.lastScoreTime = null; // 添加计时器用于计算分数
+    this.SCORE_INTERVAL = 1000; // 每秒检查一次
+    this.SCORE_PER_SECOND = 1; // 每秒增加1分
   }
   
   /**
    * 初始化游戏
    */
   init(playerName) {
+    // 先清理之前的状态
+    this.cleanup();
+    this.stopGame();
+    
+    // 设置新的状态
     this.playerName = playerName;
+    this.gameRunning = false;
+    this.gameIntervalId = null;
+    this.levelRunStart = Date.now();
+    this.lastEnemySpawnTime = Date.now();
+    this.enemiesDestroyed = 0;
+    this.objects = [];
+    this.otherPlayers = {};
+    this.player = null;
+    
+    // 重置输入状态
+    this.input = {
+      right: false,
+      left: false,
+      up: false,
+      down: false,
+    };
     
     // 初始化Socket.io连接
     this.initSocketConnection();
     
     // 显示游戏画布
     this.canvasContainer.classList.remove('hidden');
+    
+    if (this.player) {
+      this.player.score = 0;
+    }
     
     return this;
   }
@@ -71,6 +101,12 @@ class Game {
    * 初始化Socket.io连接
    */
   initSocketConnection() {
+    // 如果已经有连接，先断开
+    if (this.socket) {
+      this.socket.disconnect();
+    }
+    
+    // 创建新的连接
     this.socket = io();
     
     // 连接事件
@@ -85,6 +121,9 @@ class Game {
     
     // 接收游戏状态
     this.socket.on('gameState', (gameState) => {
+      // 保存游戏ID
+      this.gameId = gameState.id;
+      
       // 创建本地玩家
       const playerData = gameState.players[this.socket.id];
       if (playerData) {
@@ -110,6 +149,12 @@ class Game {
     // 玩家离开
     this.socket.on('playerLeft', (playerId) => {
       if (this.otherPlayers[playerId]) {
+        // 从游戏对象列表中移除
+        const index = this.objects.indexOf(this.otherPlayers[playerId]);
+        if (index !== -1) {
+          this.objects.splice(index, 1);
+        }
+        // 从其他玩家列表中移除
         delete this.otherPlayers[playerId];
       }
     });
@@ -218,13 +263,20 @@ class Game {
    * 开始游戏
    */
   startGame() {
-    if (this.gameRunning) return;
-    
     this.gameRunning = true;
-    this.levelRunStart = new Date();
-    this.gameIntervalId = setInterval(
-      () => this.gameLoop(), 1000 / this.targetFps
-    );
+    
+    // 初始化游戏时间和分数计时器
+    this.levelRunStart = Date.now();
+    this.lastEnemySpawnTime = Date.now();
+    this.lastScoreTime = Date.now();
+    
+    // 立即生成第一波敌人
+    this.spawnEnemies();
+    
+    // 开始游戏循环
+    this.gameIntervalId = setInterval(() => {
+      this.gameLoop();
+    }, 1000 / this.targetFps);
   }
   
   /**
@@ -253,8 +305,17 @@ class Game {
       return;
     }
     
-    // 生成敌人
+    // 更新生存时间分数
+    this.updateSurvivalScore();
+    
+    // 定期生成敌人
     this.spawnEnemies();
+    
+    // 每5秒检查一次是否需要生成新的球
+    if (Date.now() - (this.lastBallSpawnTime || 0) > 5000) {
+      this.spawnCollectibleBall();
+      this.lastBallSpawnTime = Date.now();
+    }
     
     // 更新游戏对象
     for (let i = 0; i < this.objects.length; i++) {
@@ -279,10 +340,11 @@ class Game {
     // 检查是否应该生成新一波敌人
     if (!this.lastEnemySpawnTime) {
       this.lastEnemySpawnTime = Date.now();
+      return;
     }
     
-    const ENEMY_SPAWN_TIME_BETWEEN_WAVES = 5000; // 5秒生成一波
-    const ENEMY_SPAWN_COUNT_PER_WAVE = 10; // 每波10个敌人
+    const ENEMY_SPAWN_TIME_BETWEEN_WAVES = 3000; // 3秒生成一波
+    const ENEMY_SPAWN_COUNT_PER_WAVE = 15; // 每波15个敌人
     const MAX_OBJECTS = 500; // 最大对象数量限制
     
     if (Date.now() - this.lastEnemySpawnTime < ENEMY_SPAWN_TIME_BETWEEN_WAVES) {
@@ -295,12 +357,21 @@ class Game {
     
     // 如果玩家存在，在玩家周围生成敌人
     if (this.player) {
+      // 计算生成位置的基准点（玩家位置）
+      const baseX = this.player.x;
+      const baseY = this.player.y;
+      
       for (let i = 0; i < ENEMY_SPAWN_COUNT_PER_WAVE; i++) {
+        // 在玩家周围的圆形区域随机生成敌人
         const radius = randomRange(900, 1200);
         const angle = randomRange(0, Math.PI * 2);
-        const randX = this.player.x + Math.sin(angle) * radius;
-        const randY = this.player.y + Math.cos(angle) * radius;
-        this.objects.push(new Enemy(randX, randY));
+        const randX = baseX + Math.sin(angle) * radius;
+        const randY = baseY + Math.cos(angle) * radius;
+        
+        const enemy = new Enemy(randX, randY);
+        enemy.baseSpeed = 0.8; // 修改基础速度
+        enemy.speed = enemy.baseSpeed; // 设置当前速度
+        this.objects.push(enemy);
       }
       
       this.lastEnemySpawnTime = Date.now();
@@ -308,28 +379,67 @@ class Game {
   }
   
   /**
+   * 清理游戏状态
+   */
+  cleanup() {
+    // 清理所有游戏对象
+    this.objects = [];
+    // 清理其他玩家
+    this.otherPlayers = {};
+    // 清理玩家实例
+    this.player = null;
+    // 重置游戏状态
+    this.gameRunning = false;
+    this.enemiesDestroyed = 0;
+    this.levelRunStart = null;
+    this.lastEnemySpawnTime = null;
+    // 重置输入状态
+    this.input = {
+      right: false,
+      left: false,
+      up: false,
+      down: false,
+    };
+    this.lastScoreTime = null;
+  }
+  
+  /**
+   * 重新开始游戏
+   */
+  restart() {
+    // 停止当前游戏循环
+    this.stopGame();
+    
+    // 清理当前游戏状态
+    this.cleanup();
+    
+    // 重新加入游戏
+    if (this.socket) {
+      this.socket.emit('playerJoin', {
+        name: this.playerName
+      });
+    }
+  }
+  
+  /**
    * 处理游戏结束
    */
   handleGameOver() {
-    this.stopGame();
+    if (!this.gameRunning) return;
     
-    // 计算分数和存活时间
-    const timer = timeSince(this.levelRunStart);
-    const survivedTime = formatTime(timer.minutes, timer.seconds);
-    const finalScore = this.enemiesDestroyed * 10 + (timer.minutes * 60 + timer.seconds);
-    
-    // 更新游戏结束界面
-    document.getElementById('survived-time').textContent = survivedTime;
-    document.getElementById('final-score').textContent = finalScore;
+    const survivedTime = (Date.now() - this.levelRunStart) / 1000;
+    const score = this.player ? this.player.score : 0; // 直接使用玩家的 score
     
     // 提交分数
-    this.submitPlayerScore(finalScore, survivedTime);
+    this.submitPlayerScore(score, survivedTime);
+    
+    // 停止游戏
+    this.stopGame();
     
     // 显示游戏结束界面
-    showScreen('game-over');
-    
-    // 隐藏游戏画布
-    this.canvasContainer.classList.add('hidden');
+    document.getElementById('game-over-screen').classList.remove('hidden');
+    document.getElementById('final-score').textContent = score;
+    document.getElementById('survived-time').textContent = Math.floor(survivedTime);
   }
   
   /**
@@ -378,17 +488,20 @@ class Game {
    * 绘制用户界面
    */
   drawUI() {
-    if (!this.player) return;
+    if (!this.player || !this.levelRunStart) return;
     
     // 计算游戏时间
-    const timer = timeSince(this.levelRunStart);
+    const currentTime = Date.now();
+    const elapsedSeconds = Math.floor((currentTime - this.levelRunStart) / 1000);
+    const minutes = Math.floor(elapsedSeconds / 60);
+    const seconds = elapsedSeconds % 60;
     
     // 绘制状态栏
     const texts = [
       `❤️: ${this.player.health}` +
       ` 💀: ${this.enemiesDestroyed}` +
-      ` LV${this.player.level}` +
-      ` ${leftPad(timer.minutes, 2, 0)}:${leftPad(timer.seconds, 2, 0)}`,
+      ` 🏆: ${this.player.score}` +
+      ` ⏱️: ${leftPad(minutes, 2, 0)}:${leftPad(seconds, 2, 0)}`,
     ];
     
     const measures = texts.map(text => measureTextDimensions(text, this.context));
@@ -397,14 +510,9 @@ class Game {
       const width = Math.max(...measures.map(measure => measure.width));
       const height = measures.reduce((acc, measure) => acc + measure.height, 0);
       
-      this.context.fillStyle = 'white';
-      this.context.fillRect(
-        x - (width / 2) - 10, y - height + 10,
-        width + 20, height * 2 - 20
-      );
-      
+      // 直接绘制文本，不绘制白色背景
       this.context.font = `24px monospace`;
-      this.context.fillStyle = 'black';
+      this.context.fillStyle = 'white'; // 改为白色文字
       
       for (const [index, text] of texts.entries()) {
         this.context.fillText(
@@ -413,23 +521,6 @@ class Game {
           y + (index * 30) + 10,
         );
       }
-    });
-    
-    // 绘制经验条
-    this.guiPosition(0, 0, (x, y) => {
-      const currentXp = this.player.xp - this.player.prevLevelXp;
-      const nextLevelXp = this.player.nextLevelXp - this.player.prevLevelXp;
-      const percentage = !currentXp ? 0 : currentXp / nextLevelXp;
-      
-      this.context.fillStyle = 'black';
-      this.context.fillRect(x, y, window.innerWidth, 26);
-      
-      this.context.fillStyle = 'blue';
-      this.context.fillRect(
-        x + 2, y + 2,
-        (window.innerWidth - 4) * percentage,
-        22
-      );
     });
   }
   
@@ -505,6 +596,33 @@ class Game {
     const bottomBound = this.canvas.height - window.innerHeight;
     return Math.max(-bottomBound, Math.min(topBound, y));
   }
+  
+  // 添加生成球的方法
+  spawnCollectibleBall() {
+    const MAX_BALLS = 10; // 场上最多10个球
+    const currentBalls = this.objects.filter(obj => obj instanceof CollectibleBall).length;
+    
+    if (currentBalls < MAX_BALLS) {
+      this.objects.push(new CollectibleBall());
+    }
+  }
+  
+  // 添加生存时间分数更新方法
+  updateSurvivalScore() {
+    if (!this.player || !this.lastScoreTime) return;
+    
+    const now = Date.now();
+    const timePassed = now - this.lastScoreTime;
+    
+    if (timePassed >= this.SCORE_INTERVAL) {
+      // 计算应该增加的分数（可能跨越多个计分间隔）
+      const intervals = Math.floor(timePassed / this.SCORE_INTERVAL);
+      const scoreToAdd = intervals * this.SCORE_PER_SECOND;
+      
+      this.player.score += scoreToAdd;
+      this.lastScoreTime = now;
+    }
+  }
 }
 
 /**
@@ -523,24 +641,29 @@ class Player {
     this.idle = true;
     this.x = x;
     this.y = y;
-    this.level = 1;
     this.width = 30 * 2;
     this.height = 33 * 2;
     this.health = 50;
     this.speed = 3;
-    this.items = [new MicWeapon(), new DiscoBallWeapon()];
-    this.xp = 0;
-    this.nextLevelXp = 10;
-    this.prevLevelXp = 0;
+    this.score = 0;
+    this.items = [new MicWeapon()];
     this.setDirection(FACE_LEFT);
   }
 
   update() {
+    // 保存移动前的位置
+    const prevX = this.x;
+    const prevY = this.y;
+    
     // 处理玩家移动
     if (game.input.right) this.x += this.speed;
     if (game.input.left) this.x -= this.speed;
     if (game.input.up) this.y -= this.speed;
     if (game.input.down) this.y += this.speed;
+    
+    // 限制玩家在游戏世界范围内
+    this.x = Math.max(this.width / 2, Math.min(WORLD_WIDTH - this.width / 2, this.x));
+    this.y = Math.max(this.height / 2, Math.min(WORLD_HEIGHT - this.height / 2, this.y));
     
     this.idle = !game.input.right && !game.input.left && 
                !game.input.up && !game.input.down;
@@ -585,17 +708,6 @@ class Player {
     this.direction = direction;
     this.animation = this.direction === FACE_LEFT ? this.leftAnimation : this.rightAnimation;
     this.animation.reset();
-  }
-
-  gainXp(xp) {
-    this.xp += xp;
-    if (this.xp >= this.nextLevelXp) this.levelUp();
-  }
-
-  levelUp() {
-    this.level += 1;
-    this.prevLevelXp = this.nextLevelXp;
-    this.nextLevelXp = this.nextLevelXp * 2.5;
   }
 }
 
@@ -672,12 +784,12 @@ class Enemy {
   constructor(x, y) {
     this.id = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
     this.leftAnimation = new Animation([
-      { time: 100, image: game.images.skeletonImageLeft },
-      { time: 100, image: game.images.skeletonImageLeft2 },
+      { time: 100, image: game.images.momcrocImageLeft },
+      { time: 100, image: game.images.momcrocImageLeft2 },
     ]);
     this.rightAnimation = new Animation([
-      { time: 100, image: game.images.skeletonImageRight },
-      { time: 100, image: game.images.skeletonImageRight2 },
+      { time: 100, image: game.images.momcrocImageRight },
+      { time: 100, image: game.images.momcrocImageRight2 },
     ]);
     this.idle = false;
     this.x = x;
@@ -686,12 +798,16 @@ class Enemy {
     this.prevY = y;
     this.width = 30 * 2;
     this.height = 33 * 2;
-    this.speed = 0.4;
+    this.baseSpeed = 0.4;  // 基础速度
+    this.speed = this.baseSpeed;
     this.health = 3;
     this.attackStrength = 1;
     this.attackSpeed = 500; // ms
     this.lastAttackTime = Date.now();
     this.destroyed = false;
+    this.isEnraged = false;  // 是否处于愤怒状态
+    this.enrageEndTime = 0;  // 愤怒状态结束时间
+    this.rageMultiplier = 1; // 愤怒状态倍率
     this.setDirection(FACE_LEFT);
   }
 
@@ -703,6 +819,13 @@ class Enemy {
     if (this.health <= 0) {
       this.destroy();
       return;
+    }
+
+    // 更新愤怒状态
+    if (this.isEnraged && Date.now() > this.enrageEndTime) {
+      this.isEnraged = false;
+      this.rageMultiplier = 1;
+      this.speed = this.baseSpeed;
     }
 
     // 向最近的玩家移动
@@ -797,6 +920,23 @@ class Enemy {
     game.enemiesDestroyed += 1;
     game.objects.push(new Candy(this.x, this.y));
   }
+
+  // 添加新方法：进入愤怒状态
+  enrage() {
+    this.isEnraged = true;
+    this.rageMultiplier += 1.5; // 每次触发增加1.5倍速度
+    this.speed = this.baseSpeed * this.rageMultiplier;
+    this.enrageEndTime = Date.now() + 5000;  // 5秒后恢复
+    
+    // 添加视觉效果
+    game.objects.push(
+      new DamageTakenText(
+        "🔥".repeat(Math.min(5, Math.floor(this.rageMultiplier / 1.5))), // 调整火焰显示的计算方式
+        this.x,
+        this.y - 30
+      )
+    );
+  }
 }
 
 /**
@@ -804,12 +944,12 @@ class Enemy {
  */
 class Candy {
   constructor(x, y) {
-    this.image = game.images.candyDroppedImage;
+    this.image = game.images.eggDroppedImage;
     this.x = x;
     this.y = y;
     this.attractRadius = 200;
     this.pickupRadius = 50;
-    this.xp = 1;
+    this.scoreValue = 20; // 每个糖果值20分
     this.destroyed = false;
   }
 
@@ -840,9 +980,36 @@ class Candy {
 
   pickup() {
     if (this.destroyed) return;
-    this.destroy();
+    this.destroyed = true;
+    // 增加玩家分数
     if (game.player) {
-      game.player.gainXp(this.xp);
+      game.player.score = (game.player.score || 0) + this.scoreValue;
+      // 创建分数提示文本
+      game.objects.push(
+        new ScoreText(
+          `+${this.scoreValue}`,
+          this.x,
+          this.y
+        )
+      );
+
+      // 10%概率触发愤怒状态
+      if (Math.random() < 0.1) {
+        game.objects.forEach(obj => {
+          if (obj instanceof Enemy) {
+            obj.enrage();
+          }
+        });
+
+        // 创建愤怒状态提示文本
+        game.objects.push(
+          new DamageTakenText(
+            "MOMCROC ENRAGED!", 
+            game.player.x, 
+            game.player.y - 50
+          )
+        );
+      }
     }
   }
 
@@ -944,110 +1111,6 @@ class Weapon {
 }
 
 /**
- * 迪斯科球武器
- */
-class DiscoBallWeapon extends Weapon {
-  constructor() {
-    const attackSpeed = 14000; // ms
-    const attackAnimationFrames = 5;
-    super(attackSpeed, attackAnimationFrames);
-    this.level = 4;
-  }
-
-  spawnCount() {
-    return this.level;
-  }
-
-  update() {
-    super.update();
-    if (this.firstAttackFrame()) {
-      const spawnCount = this.spawnCount();
-      for (var i = 0; i < spawnCount; i++) {
-        setTimeout(() => {
-          game.objects.push(
-            new DiscoPool()
-          );
-        }, i * (700 + randomRange(0, 100)));
-      }
-    }
-  }
-
-  draw() {}
-}
-
-/**
- * 迪斯科球效果
- */
-class DiscoPool extends Weapon {
-  constructor() {
-    const speed = 2000;
-    const animationFrames = 5;
-    const strength = 1;
-    super(speed, animationFrames, strength);
-    this.updateFrames = 60 * 10;
-    this.animation = new Animation([
-      { time: 12, image: game.images.ballImage1 },
-      { time: 12, image: game.images.ballImage2 },
-    ]);
-    this.x = game.player.x + randomRange(-300, 300);
-    this.y = game.player.y + randomRange(-300, 300);
-    this.fillStyle = 'rgb(225, 180, 255)';
-    this.opacity = 0.7;
-    this.radius = 80;
-    this.destroyed = false;
-  }
-
-  update() {
-    super.update();
-    this.animation.update();
-    
-    if (this.updateFramesPassed > this.updateFrames) {
-      this.destroyed = true;
-    }
-    
-    this.opacity = lerp(this.opacity, 0, 0.002);
-
-    if (this.firstAttackFrame()) {
-      // 检查敌人是否在范围内
-      for (const object of game.objects) {
-        if (object instanceof Enemy) {
-          if (!pointInCircle(object.x, object.y, this.x, this.y, this.radius)) continue;
-          object.hit(this.attackStrength);
-        }
-      }
-    }
-  }
-
-  draw() {
-    // 保存上下文
-    game.context.save();
-    
-    // 设置样式
-    game.context.fillStyle = this.fillStyle;
-    game.context.globalAlpha = this.opacity;
-    
-    // 绘制圆形
-    game.context.beginPath();
-    game.context.ellipse(this.x, this.y, this.radius, this.radius, 0, 0, Math.PI * 2);
-    game.context.fill();
-    
-    // 恢复上下文
-    game.context.restore();
-
-    // 绘制动画
-    const image = this.animation.image();
-    if (image) {
-      game.context.drawImage(
-        image,
-        this.x - (image.width / 3.2),
-        this.y - 140,
-        image.width / 2.0, image.height / 2.0
-      );
-    }
-  }
-}
-
-/**
  * 麦克风武器
  */
 class MicWeapon extends Weapon {
@@ -1058,7 +1121,7 @@ class MicWeapon extends Weapon {
     super(attackSpeed, attackAnimationFrames, attackStrength);
     this.level = 8;
     this.radius = 100;
-    this.image = game.images.micImage;
+    this.image = game.images.iphoneImage;
     this.angle = 0;
     this.enemiesHit = {};
     this.x = 0;
@@ -1068,7 +1131,7 @@ class MicWeapon extends Weapon {
   update() {
     if (!game.player) return;
     
-    this.angle = (this.angle + (0.05 * this.level)) % 360;
+    this.angle = (this.angle + (0.02 * this.level)) % 360; // 降低旋转速度
     this.x = game.player.x + Math.sin(this.angle) * this.radius;
     this.y = game.player.y + Math.cos(this.angle) * this.radius;
     
@@ -1117,6 +1180,113 @@ class MicWeapon extends Weapon {
     );
     
     // 恢复上下文
+    game.context.restore();
+  }
+}
+
+/**
+ * 可收集的球
+ */
+class CollectibleBall {
+  constructor() {
+    this.animation = new Animation([
+      { time: 12, image: game.images.babycrocImage1 },
+      { time: 12, image: game.images.babycrocImage2 },
+    ]);
+    // 在地图范围内随机生成
+    this.x = randomRange(0, WORLD_WIDTH);
+    this.y = randomRange(0, WORLD_HEIGHT);
+    this.scoreValue = 100; // 收集后获得的分数
+    this.radius = 40; // 碰撞检测半径
+    this.destroyed = false;
+  }
+
+  update() {
+    if (this.destroyed) return;
+    
+    this.animation.update();
+    
+    // 检查是否被玩家收集
+    if (game.player && pointInCircle(game.player.x, game.player.y, this.x, this.y, this.radius)) {
+      this.collect();
+    }
+  }
+
+  draw() {
+    const image = this.animation.image();
+    if (image) {
+      game.context.drawImage(
+        image,
+        this.x - (image.width / 3.2),
+        this.y - (image.height / 3.2),
+        image.width / 2.0, 
+        image.height / 2.0
+      );
+    }
+  }
+
+  collect() {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    // 增加玩家分数
+    if (game.player) {
+      game.player.score = (game.player.score || 0) + this.scoreValue;
+      // 创建分数提示文本
+      game.objects.push(
+        new ScoreText(
+          `+${this.scoreValue}`, 
+          this.x, 
+          this.y
+        )
+      );
+
+      // 10%概率触发愤怒状态
+      if (Math.random() < 0.1) {
+        game.objects.forEach(obj => {
+          if (obj instanceof Enemy) {
+            obj.enrage();
+          }
+        });
+
+        // 创建愤怒状态提示文本
+        game.objects.push(
+          new DamageTakenText(
+            "MOMCROC ENRAGED!", 
+            game.player.x, 
+            game.player.y - 50
+          )
+        );
+      }
+    }
+  }
+}
+
+/**
+ * 分数提示文本
+ */
+class ScoreText {
+  constructor(text, x, y) {
+    this.text = text;
+    this.x = x;
+    this.y = y;
+    this.lifespan = 60; // 持续60帧
+    this.destroyed = false;
+  }
+
+  update() {
+    this.lifespan--;
+    this.y -= 1; // 向上飘动
+    if (this.lifespan <= 0) {
+      this.destroyed = true;
+    }
+  }
+
+  draw() {
+    game.context.save();
+    game.context.fillStyle = '#FFD700'; // 金色
+    game.context.font = '20px Arial';
+    game.context.textAlign = 'center';
+    game.context.fillText(this.text, this.x, this.y);
     game.context.restore();
   }
 }

@@ -1,18 +1,20 @@
 {
-  "name": "survivors-online",
+  "name": "babycroc",
   "version": "1.0.0",
-  "description": "Online multiplayer version of Survivors game",
+  "description": "I Take A Baby Crocodile Game",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
     "dev": "nodemon server/index.js"
   },
+  "engines": {
+    "node": "18.x"
+  },
   "dependencies": {
     "express": "^4.18.2",
-    "socket.io": "^4.7.2",
-    "mongoose": "^7.5.0"
+    "socket.io": "^4.7.2"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1"
+    "nodemon": "^3.0.2"
   }
-} 
+}

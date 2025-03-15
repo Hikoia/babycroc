@@ -1,5 +1,5 @@
 /**
- * 对话系统处理
+ * Dialog System Handler
  */
 class DialogSystem {
   constructor() {
@@ -10,25 +10,46 @@ class DialogSystem {
     this.nameElement = document.getElementById('dialog-name');
     this.textElement = document.getElementById('dialog-text');
     this.dialogBox = document.querySelector('.dialog-box');
+    this.isAnimating = false;
+    this.currentTextAnimation = null;
+    this.lastClickTime = 0;
+    this.clickCooldown = 500;
     
-    // 绑定点击事件
+    // Bind click event
     if (this.dialogBox) {
-      this.dialogBox.addEventListener('click', () => this.nextDialog());
+      this.dialogBox.addEventListener('click', (e) => {
+        e.preventDefault();  // Prevent default behavior
+        e.stopPropagation();  // Stop event bubbling
+        
+        const currentTime = Date.now();
+        // Check if within cooldown period
+        if (currentTime - this.lastClickTime < this.clickCooldown) {
+          return;
+        }
+        this.lastClickTime = currentTime;
+        
+        this.nextDialog();
+      });
     }
   }
   
   /**
-   * 设置对话序列
+   * Set dialog sequence
    */
   setDialogs(dialogs) {
     this.dialogQueue = [...dialogs];
     this.currentDialog = null;
     this.isPlaying = false;
+    this.isAnimating = false;
+    if (this.currentTextAnimation) {
+      this.currentTextAnimation.stop();
+      this.currentTextAnimation = null;
+    }
     return this;
   }
   
   /**
-   * 开始对话
+   * Start dialog sequence
    */
   startDialogs(onComplete) {
     this.onComplete = onComplete;
@@ -43,60 +64,74 @@ class DialogSystem {
   }
   
   /**
-   * 显示下一个对话
+   * Display next dialog
    */
   showNextDialog() {
     if (!this.isPlaying || this.dialogQueue.length === 0) {
       this.isPlaying = false;
+      this.isAnimating = false;
+      if (this.currentTextAnimation) {
+        this.currentTextAnimation.stop();
+        this.currentTextAnimation = null;
+      }
       if (this.onComplete) this.onComplete();
       return;
     }
     
     this.currentDialog = this.dialogQueue.shift();
     
-    // 更新头像
+    // Update avatar
     if (this.avatarElement && this.currentDialog.avatar) {
       this.avatarElement.src = `assets/${this.currentDialog.avatar}`;
     }
     
-    // 更新名称
+    // Update name
     if (this.nameElement) {
       this.nameElement.textContent = this.currentDialog.name || '';
     }
     
-    // 更新文本（使用动画效果）
+    // Update text with animation
     if (this.textElement) {
-      const textAnimation = new TextAnimation({
+      this.isAnimating = true;
+      this.currentTextAnimation = new TextAnimation({
         element: this.textElement,
         text: this.currentDialog.text || '',
-        speed: 30
+        speed: 30,
+        onComplete: () => {
+          this.isAnimating = false;
+          this.currentTextAnimation = null;
+        }
       });
-      textAnimation.start();
+      this.currentTextAnimation.start();
     }
   }
   
   /**
-   * 处理点击事件，进入下一个对话
+   * Handle click event and proceed to next dialog
    */
   nextDialog() {
     if (!this.isPlaying) return;
     
-    // 如果文本正在动画中，则立即显示完整文本
-    if (this.textElement && this.currentDialog && 
-        this.textElement.textContent !== this.currentDialog.text) {
-      this.textElement.textContent = this.currentDialog.text;
+    if (this.isAnimating && this.currentTextAnimation) {
+      this.currentTextAnimation.complete();
+      this.isAnimating = false;
       return;
     }
     
-    // 否则，显示下一个对话
+    // Otherwise, show next dialog
     this.showNextDialog();
   }
   
   /**
-   * 跳过所有对话
+   * Skip all remaining dialogs
    */
   skipAllDialogs() {
     this.isPlaying = false;
+    this.isAnimating = false;
+    if (this.currentTextAnimation) {
+      this.currentTextAnimation.stop();
+      this.currentTextAnimation = null;
+    }
     this.dialogQueue = [];
     if (this.onComplete) this.onComplete();
   }

@@ -29,28 +29,18 @@ const GAME_STATE = {
 // 介绍对话常量
 const INTRO_DIALOGS = [
   {
-    name: '引导者',
+    name: 'PM Wombat',
     avatar: 'avatar1.png',
-    text: '欢迎来到"幸存者在线"的世界，这里曾经是一个繁荣的世界，但现在已经被亡灵占领。'
+    text: "Crikey, mate! You can't just go 'round grabbing our wildlife! How'd you like it if we pinched your bald eagle chicks? Take a baby crocodile, see how you go!"
   },
   {
-    name: '引导者',
-    avatar: 'avatar1.png',
-    text: '作为少数幸存者之一，你的任务是在这个危险的世界中生存下去。'
-  },
-  {
-    name: '战士',
+    name: 'Sane Jones',
     avatar: 'avatar2.png',
-    text: '你将使用你的武器与其他幸存者一起战斗，看谁能生存得更久。'
+    text: "A baby crocodile? If that's what it takes to make amends, I'll do it. In another life, another chance, I want to be remembered for helping Australia, not harming it. I'll catch those baby crocodile and show everyone I've changed. I promise."
   },
   {
-    name: '战士',
+    name: 'Sane Jones',
     avatar: 'avatar2.png',
-    text: '消灭敌人，收集经验值，提升等级，解锁更强大的能力。但请记住，死亡是永久的。'
-  },
-  {
-    name: '引导者',
-    avatar: 'avatar1.png',
-    text: '你准备好踏上这段危险的旅程了吗？让我们开始吧！'
+    text: "MWGA!!! Makes Wombat Great Again!!!"
   }
 ]; 

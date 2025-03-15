@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>幸存者在线 - Survivors Online</title>
+    <title>I Take A Baby Crocodile</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -11,11 +11,11 @@
         <!-- 加载画面 -->
         <div id="loading-screen" class="screen">
             <div class="loading-container">
-                <h1>幸存者在线</h1>
+                <h1>I Take A Baby Crocodile</h1>
                 <div class="loading-bar">
                     <div class="loading-progress"></div>
                 </div>
-                <p>加载中，请稍候...</p>
+                <p>Loading...</p>
             </div>
         </div>
 
@@ -26,9 +26,9 @@
                     <img id="dialog-avatar-img" src="assets/avatar1.png" alt="Character">
                 </div>
                 <div class="dialog-box">
-                    <div class="dialog-name" id="dialog-name">引导者</div>
-                    <div class="dialog-text" id="dialog-text">欢迎来到"幸存者在线"的世界。</div>
-                    <div class="dialog-prompt">点击继续...</div>
+                    <div class="dialog-name" id="dialog-name">PM Wombat</div>
+                    <div class="dialog-text" id="dialog-text"></div>
+                    <div class="dialog-prompt">Click to continue...</div>
                 </div>
             </div>
         </div>
@@ -36,10 +36,10 @@
         <!-- 主菜单界面 -->
         <div id="main-menu" class="screen hidden">
             <div class="menu-container">
-                <h1>幸存者在线</h1>
+                <h1>I Take A Baby Crocodile</h1>
                 <div class="menu-options">
-                    <button id="play-button" class="menu-button">进入游戏</button>
-                    <button id="leaderboard-button" class="menu-button">排行榜</button>
+                    <button id="play-button" class="menu-button">Play</button>
+                    <button id="leaderboard-button" class="menu-button">Leaderboard</button>
                 </div>
             </div>
         </div>
@@ -47,34 +47,34 @@
         <!-- 玩家名输入界面 -->
         <div id="name-input" class="screen hidden">
             <div class="input-container">
-                <h2>输入你的名字</h2>
-                <input type="text" id="player-name" maxlength="15" placeholder="你的名字...">
-                <button id="start-game-button" class="menu-button">开始游戏</button>
-                <button id="back-to-menu-button" class="menu-button">返回</button>
+                <h2>Please enter your name</h2>
+                <input type="text" id="player-name" maxlength="15" placeholder="Your name...">
+                <button id="start-game-button" class="menu-button">Start Game</button>
+                <button id="back-to-menu-button" class="menu-button">Back</button>
             </div>
         </div>
 
         <!-- 排行榜界面 -->
         <div id="leaderboard-screen" class="screen hidden">
             <div class="leaderboard-container">
-                <h2>排行榜</h2>
+                <h2>Leaderboard</h2>
                 <div class="leaderboard-list" id="leaderboard-list">
                     <!-- 排行榜内容将由JavaScript动态生成 -->
                 </div>
-                <button id="leaderboard-back-button" class="menu-button">返回</button>
+                <button id="leaderboard-back-button" class="menu-button">Back to Menu</button>
             </div>
         </div>
 
         <!-- 游戏结束界面 -->
-        <div id="game-over" class="screen hidden">
+        <div id="game-over-screen" class="screen hidden">
             <div class="game-over-container">
-                <h2>游戏结束</h2>
+                <h2>Game Over</h2>
                 <div class="game-stats">
-                    <p>存活时间: <span id="survived-time">00:00</span></p>
-                    <p>最终分数: <span id="final-score">0</span></p>
+                    <p>Survived Time: <span id="survived-time">00:00</span></p>
+                    <p>Final Score: <span id="final-score">0</span></p>
                 </div>
-                <button id="play-again-button" class="menu-button">再次游戏</button>
-                <button id="game-over-menu-button" class="menu-button">返回主菜单</button>
+                <button id="restart-button" class="menu-button">Restart</button>
+                <button id="game-over-menu-button" class="menu-button">Back to Menu</button>
             </div>
         </div>
     </div>
@@ -87,6 +87,9 @@
     <!-- 加载Socket.io客户端库 -->
     <script src="/socket.io/socket.io.js"></script>
     
+    <!-- 加载Tenor GIF嵌入脚本 -->
+    <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+    
     <!-- 加载游戏脚本 -->
     <script src="js/constants.js"></script>
     <script src="js/utilities.js"></script>
@@ -94,5 +97,12 @@
     <script src="js/dialog.js"></script>
     <script src="js/game.js"></script>
     <script src="js/main.js"></script>
+
+    <!-- 添加彩蛋容器 -->
+    <div id="easter-egg" class="hidden" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; text-align: center; background: rgba(0,0,0,0.8); padding: 20px; border-radius: 10px;">
+        <div class="tenor-gif-embed" data-postid="7900749342002288354" data-share-method="host" data-aspect-ratio="1" data-width="300px"><a href="https://tenor.com/view/wombat-goint-to-debate-wombot-gif-7900749342002288354">Wombat Goint To Debate GIF</a></div>
+        <h2 style="color: white; font-family: Arial; margin: 20px 0;">Make Wombat Great Again!</h2>
+        <button id="easter-egg-close" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">OK</button>
+    </div>
 </body>
 </html> 

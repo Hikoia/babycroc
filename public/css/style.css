@@ -1,0 +1,24 @@
+.hidden {
+  display: none !important;
+}
+
+#easter-egg {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -60%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+#easter-egg-close:hover {
+  background: #45a049 !important;
+  transform: scale(1.05);
+  transition: all 0.2s ease;
+} 
