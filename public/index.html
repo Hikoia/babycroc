@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>幸存者在线 - Survivors Online</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- 加载画面 -->
+        <div id="loading-screen" class="screen">
+            <div class="loading-container">
+                <h1>幸存者在线</h1>
+                <div class="loading-bar">
+                    <div class="loading-progress"></div>
+                </div>
+                <p>加载中，请稍候...</p>
+            </div>
+        </div>
+
+        <!-- 开场白对话界面 -->
+        <div id="intro-screen" class="screen hidden">
+            <div class="dialog-container">
+                <div class="dialog-avatar">
+                    <img id="dialog-avatar-img" src="assets/avatar1.png" alt="Character">
+                </div>
+                <div class="dialog-box">
+                    <div class="dialog-name" id="dialog-name">引导者</div>
+                    <div class="dialog-text" id="dialog-text">欢迎来到"幸存者在线"的世界。</div>
+                    <div class="dialog-prompt">点击继续...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主菜单界面 -->
+        <div id="main-menu" class="screen hidden">
+            <div class="menu-container">
+                <h1>幸存者在线</h1>
+                <div class="menu-options">
+                    <button id="play-button" class="menu-button">进入游戏</button>
+                    <button id="leaderboard-button" class="menu-button">排行榜</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 玩家名输入界面 -->
+        <div id="name-input" class="screen hidden">
+            <div class="input-container">
+                <h2>输入你的名字</h2>
+                <input type="text" id="player-name" maxlength="15" placeholder="你的名字...">
+                <button id="start-game-button" class="menu-button">开始游戏</button>
+                <button id="back-to-menu-button" class="menu-button">返回</button>
+            </div>
+        </div>
+
+        <!-- 排行榜界面 -->
+        <div id="leaderboard-screen" class="screen hidden">
+            <div class="leaderboard-container">
+                <h2>排行榜</h2>
+                <div class="leaderboard-list" id="leaderboard-list">
+                    <!-- 排行榜内容将由JavaScript动态生成 -->
+                </div>
+                <button id="leaderboard-back-button" class="menu-button">返回</button>
+            </div>
+        </div>
+
+        <!-- 游戏结束界面 -->
+        <div id="game-over" class="screen hidden">
+            <div class="game-over-container">
+                <h2>游戏结束</h2>
+                <div class="game-stats">
+                    <p>存活时间: <span id="survived-time">00:00</span></p>
+                    <p>最终分数: <span id="final-score">0</span></p>
+                </div>
+                <button id="play-again-button" class="menu-button">再次游戏</button>
+                <button id="game-over-menu-button" class="menu-button">返回主菜单</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 游戏画布容器，初始为隐藏状态 -->
+    <div id="canvas-container" class="hidden" style="position:absolute; top:0; left:0;">
+        <canvas id="canvas" width="2000" height="2000"></canvas>
+    </div>
+
+    <!-- 加载Socket.io客户端库 -->
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <!-- 加载游戏脚本 -->
+    <script src="js/constants.js"></script>
+    <script src="js/utilities.js"></script>
+    <script src="js/animations.js"></script>
+    <script src="js/dialog.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html> 
