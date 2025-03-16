@@ -35,7 +35,7 @@ class Game {
     this.touchCurrentY = 0;
     this.touchThreshold = 30; // 触控移动阈值
     this.isTouching = false;
-    this.maxJoystickDistance = 50; // 虚拟摇杆最大距离
+    this.maxJoystickDistance = 100; // 虚拟摇杆最大距离
     this.showJoystick = false; // 是否显示虚拟摇杆
     
     // 网络相关

@@ -19,15 +19,24 @@ document.addEventListener('DOMContentLoaded', () => {
   // Start loading game resources
   loadGameResources();
 
-  const startButton = document.getElementById('start-button');
+  const startButton = document.getElementById('start-game-button');
   const playerNameInput = document.getElementById('player-name');
   const loginScreen = document.getElementById('login-screen');
   const easterEgg = document.getElementById('easter-egg');
   const easterEggCloseButton = document.getElementById('easter-egg-close');
+  const authorInfo = document.getElementById('author-info');
+  const authorInfoCloseButton = document.getElementById('author-info-close');
 
   // 添加彩蛋关闭按钮事件
   easterEggCloseButton.addEventListener('click', () => {
     easterEgg.classList.add('hidden');
+    playerNameInput.value = ''; // 清空输入
+    playerNameInput.focus(); // 聚焦到输入框
+  });
+  
+  // 添加作者信息关闭按钮事件
+  authorInfoCloseButton.addEventListener('click', () => {
+    authorInfo.classList.add('hidden');
     playerNameInput.value = ''; // 清空输入
     playerNameInput.focus(); // 聚焦到输入框
   });
@@ -38,6 +47,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // 检查是否触发彩蛋
     if (playerName.toLowerCase() === 'wombat') {
       easterEgg.classList.remove('hidden');
+      return;
+    }
+    
+    // 检查是否触发作者信息彩蛋
+    if (playerName.toLowerCase() === 'author') {
+      authorInfo.classList.remove('hidden');
       return;
     }
     
@@ -55,6 +70,12 @@ document.addEventListener('DOMContentLoaded', () => {
       // 检查是否触发彩蛋
       if (playerName.toLowerCase() === 'wombat') {
         easterEgg.classList.remove('hidden');
+        return;
+      }
+      
+      // 检查是否触发作者信息彩蛋
+      if (playerName.toLowerCase() === 'author') {
+        authorInfo.classList.remove('hidden');
         return;
       }
       
@@ -76,6 +97,20 @@ function bindEventHandlers() {
     easterEggCloseButton.addEventListener('click', () => {
       const easterEgg = document.getElementById('easter-egg');
       easterEgg.classList.add('hidden');
+      const nameInput = document.getElementById('player-name');
+      if (nameInput) {
+        nameInput.value = '';
+        nameInput.focus();
+      }
+    });
+  }
+  
+  // 作者信息关闭按钮
+  const authorInfoCloseButton = document.getElementById('author-info-close');
+  if (authorInfoCloseButton) {
+    authorInfoCloseButton.addEventListener('click', () => {
+      const authorInfo = document.getElementById('author-info');
+      authorInfo.classList.add('hidden');
       const nameInput = document.getElementById('player-name');
       if (nameInput) {
         nameInput.value = '';
@@ -277,6 +312,13 @@ function startGame(playerName) {
   const easterEgg = document.getElementById('easter-egg');
   if (playerName.toLowerCase() === 'wombat') {
     easterEgg.classList.remove('hidden');
+    return;
+  }
+  
+  // 检查是否触发作者信息彩蛋
+  const authorInfo = document.getElementById('author-info');
+  if (playerName.toLowerCase() === 'author') {
+    authorInfo.classList.remove('hidden');
     return;
   }
 
